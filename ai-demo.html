@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Predictions Demo — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">🩸 <span>Blood</span>Connect</div>
+    <div class="nav-links">
+      <a href="index .html">Home</a>
+      <a href="admin-dashboard.html">Admin Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- AI DEMO HEADER -->
+  <div class="page" style="text-align:center;padding:3rem 1.5rem;">
+    <div style="max-width:1000px;margin:0 auto;">
+      <div style="font-size:4rem;margin-bottom:1rem;">🤖</div>
+      <h1 style="font-size:2.5rem;margin-bottom:0.5rem;">AI Blood Demand Prediction Demo</h1>
+      <p style="font-size:1.2rem;color:var(--gray-400);margin-bottom:2rem;">Experience our revolutionary machine learning system in action</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem;margin:3rem 0;">
+        <div class="card" style="text-align:left;">
+          <div class="card-title">🎯 What Makes This Unique</div>
+          <ul style="line-height:1.6;">
+            <li><strong>7-Day Forecasting:</strong> Predict blood demand up to a week ahead</li>
+            <li><strong>Multi-Factor Analysis:</strong> Considers seasonal patterns, events, and trends</li>
+            <li><strong>Emergency Optimization:</strong> Smart donor and blood bank matching</li>
+            <li><strong>Real-time Adaptation:</strong> Learns from current emergency patterns</li>
+            <li><strong>Confidence Scoring:</strong> Each prediction includes accuracy rating</li>
+          </ul>
+        </div>
+
+        <div class="card" style="text-align:left;">
+          <div class="card-title">📊 Live Demo Predictions</div>
+          <div id="demo-predictions">
+            <div style="text-align:center;padding:2rem;">
+              <div class="spinner"></div>
+              <p style="margin-top:1rem;color:var(--gray-400);">Generating AI predictions...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin:3rem 0;">
+        <div class="card-title">🚀 Market Differentiation</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;text-align:left;">
+          <div>
+            <h4 style="color:var(--red);">⚡ Predictive vs Reactive</h4>
+            <p>Traditional systems react to shortages. Our AI <strong>prevents</strong> them.</p>
+          </div>
+          <div>
+            <h4 style="color:var(--red);">🎯 Smart Matching</h4>
+            <p>AI finds optimal donors and blood banks based on location, compatibility, and availability.</p>
+          </div>
+          <div>
+            <h4 style="color:var(--red);">📈 Real-time Learning</h4>
+            <p>System adapts predictions based on current emergency patterns and historical data.</p>
+          </div>
+          <div>
+            <h4 style="color:var(--red);">⏱️ Time Savings</h4>
+            <p>Reduces emergency response time by up to 30% through intelligent resource allocation.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin:3rem 0;">
+        <a href="admin-dashboard.html" class="btn btn-primary btn-lg" target="_blank">🔐 Access Full AI Dashboard</a>
+        <p style="font-size:0.9rem;color:var(--gray-400);margin-top:1rem;">Login as admin to see live emergency optimization and full prediction analytics</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="ai-predictor.js"></script>
+  <script>
+    DB.init();
+
+    // Generate demo predictions
+    setTimeout(() => {
+      const predictions = AIPredictor.getSystemPredictions();
+      const container = document.getElementById('demo-predictions');
+
+      container.innerHTML = `
+        <div style="text-align:left;">
+          <h4 style="margin-bottom:1rem;">📈 3-Day Blood Demand Forecast (Sample)</h4>
+          <div class="blood-grid" style="margin-bottom:2rem;">
+            ${Object.keys(predictions).slice(0, 4).map(group => {
+              const todayPred = predictions[group].find(p => p.day === new Date().toLocaleDateString('en-US', { weekday: 'short' }));
+              return `
+                <div class="blood-card ${todayPred?.predictedDemand > 8 ? 'critical' : todayPred?.predictedDemand > 5 ? 'low' : 'good'}">
+                  <div class="bg-label">${group}</div>
+                  <div class="bg-units">Today: ${todayPred?.predictedDemand || 0} units</div>
+                  <div class="bg-status">${todayPred?.confidence || 0}% confidence</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <p style="font-size:0.9rem;color:var(--gray-400);"><em>* This is a live demo using our AI prediction engine. Full features available in admin dashboard.</em></p>
+        </div>
+      `;
+    }, 2000);
+  </script>
+</body>
+</html>

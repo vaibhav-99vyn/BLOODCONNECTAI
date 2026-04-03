@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blood Bank Dashboard — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">🩸 <span>Blood</span>Connect</div>
+    <div class="nav-links">
+      <a href="index .html">Home</a>
+      <a href="live-network-map.html">🌐 Live Network</a>
+      <a href="blood-expiry-tracker.html">⏳ Expiry Tracker</a>
+      <button class="logout-btn" onclick="Auth.logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="page" id="app">
+    <div style="text-align:center;padding:3rem;"><div class="spinner"></div></div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="auth.js"></script>
+  <script src="emergency.js"></script>
+  <script>
+    DB.init();
+    const user = Auth.requireAuth('bloodbank');
+    if (!user) throw new Error();
+
+    const BLOOD_GROUPS = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+    let lastExpiryAlertType = null;
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 50);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function syncDashboard() {
+      renderDashboard();
+      showToast('🔄 Manual sync complete', 'success');
+    }
+
+    function getStockClass(units) {
+      if (units === 0) return 'critical';
+      if (units <= 5) return 'low';
+      return 'good';
+    }
+
+    function getExpirySummary() {
+      const items = DB.getStockByExpiryStatus().filter(s => s.ownerId === user.id);
+      const summary = { critical: 0, warning: 0, safe: 0, expired: 0, unknown: 0 };
+      items.forEach(i => {
+        if (summary[i.status] !== undefined) summary[i.status] += i.units;
+      });
+      return { items, summary };
+    }
+
+    function renderExpiryTracker() {
+      const { items, summary } = getExpirySummary();
+      return `
+        <div class="card">
+          <div class="card-title">⏳ Expiry Tracker</div>
+          <div class="stats-grid" style="margin-bottom:1rem;">
+            <div class="stat-card"><div class="stat-value" style="color:var(--red);">${summary.critical}</div><div class="stat-label">Critical (&lt;=3 days)</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:var(--warning);">${summary.warning}</div><div class="stat-label">Warning (&lt;=7 days)</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:var(--success);">${summary.safe}</div><div class="stat-label">Safe</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:var(--gray-500);">${summary.expired}</div><div class="stat-label">Expired/Wasted</div></div>
+          </div>
+          <div class="table-wrap">
+            <table class="inventory-table">
+              <thead><tr><th>Blood Group</th><th>Units</th><th>Expiry</th><th>Status</th></tr></thead>
+              <tbody>
+                ${items.sort((a,b)=>a.daysLeft-b.daysLeft).map(i => `<tr>
+                  <td>${i.bloodGroup}</td>
+                  <td>${i.units}</td>
+                  <td>${i.expiryDate || '—'}</td>
+                  <td><span class="expiry-badge ${i.status}">${i.status.toUpperCase()}</span></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDashboard() {
+      const stock = DB.getStockByOwner(user.id);
+      const totalUnits = stock.reduce((s, x) => s + x.units, 0);
+      const donations = DB.getDonations().filter(d => d.receiverId === user.id);
+      const emergencies = DB.getEmergencies().filter(e =>
+        e.sourcesAlerted && e.sourcesAlerted.some(s => s.id === user.id)
+      );
+
+      const expiryInfo = getExpirySummary();
+      const criticalCount = expiryInfo.summary.critical;
+      const warningCount = expiryInfo.summary.warning;
+      const newAlertType = criticalCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'success';
+      if (newAlertType !== lastExpiryAlertType) {
+        if (newAlertType === 'error') showToast(`⚠️ ${criticalCount} critical unit(s) expiring soon`, 'error');
+        else if (newAlertType === 'warning') showToast(`⚠️ ${warningCount} unit(s) near expiry`, 'warning');
+        lastExpiryAlertType = newAlertType;
+      }
+
+      document.getElementById('app').innerHTML = `
+        <div class="dash-header">
+          <div>
+            <h1>${user.name}</h1>
+            <p>Blood Bank Inventory & Emergency Management</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button class="btn btn-secondary btn-sm" onclick="syncDashboard()">🔄 Force Sync</button>
+            <div class="user-pill">🏦 Blood Bank</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${totalUnits}</div>
+            <div class="stat-label">Total Blood Units</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${donations.length}</div>
+            <div class="stat-label">Donations Received</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${emergencies.filter(e => e.status === 'active').length}</div>
+            <div class="stat-label">Active Emergencies</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color:var(--red);">${stock.filter(s => s.units === 0).length}</div>
+            <div class="stat-label">Groups at Zero</div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('stock', this)">🩸 Blood Inventory</button>
+          <button class="tab-btn" onclick="switchTab('expiry', this)">⏳ Expiry Tracker</button>
+          <button class="tab-btn" onclick="switchTab('update', this)">✏️ Update Stock</button>
+          <button class="tab-btn" onclick="switchTab('donations', this)">📋 Donations</button>
+          <button class="tab-btn" onclick="switchTab('emergencies', this)">🚨 Emergency Alerts</button>
+          <button class="tab-btn" onclick="switchTab('passport', this)">🪪 Donor Passport</button>
+          <button class="tab-btn" onclick="switchTab('dispatch', this)">📦 Dispatch Blood</button>
+        </div>
+
+        <!-- STOCK TAB -->
+        <div class="tab-panel active" id="tab-stock">
+          <div class="card">
+            <div class="card-title">🩸 Current Blood Inventory</div>
+            <div class="blood-grid">
+              ${BLOOD_GROUPS.map(bg => {
+                const s = stock.find(x => x.bloodGroup === bg);
+                const units = s ? s.units : 0;
+                const cls = getStockClass(units);
+                const status = units === 0 ? 'CRITICAL' : units <= 5 ? 'LOW' : 'SUFFICIENT';
+                return `<div class="blood-card ${cls}">
+                  <div class="bg-label">${bg}</div>
+                  <div class="bg-units">${units} units</div>
+                  <div class="bg-status">${status}</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPIRY TRACKER TAB -->
+        <div class="tab-panel" id="tab-expiry">
+          ${renderExpiryTracker()}
+        </div>
+
+        <!-- UPDATE STOCK TAB -->
+        <div class="tab-panel" id="tab-update">
+          <div class="card">
+            <div class="card-title">✏️ Update Inventory</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Blood Group</label>
+                <select id="upd_bg">${BLOOD_GROUPS.map(bg => `<option>${bg}</option>`).join('')}</select>
+              </div>
+              <div class="form-group">
+                <label>Action</label>
+                <select id="upd_action">
+                  <option value="add">➕ Add Units (Received)</option>
+                  <option value="remove">➖ Remove Units (Dispatched/Expired)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Number of Units</label>
+                <input type="number" id="upd_units" min="1" value="1" />
+              </div>
+              <div class="form-group">
+                <label>Expiry Date (when adding)</label>
+                <input type="date" id="upd_expiry" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Source / Reason</label>
+              <input type="text" id="upd_reason" placeholder="e.g. Camp donation, dispatched to hospital" />
+            </div>
+            <button class="btn btn-primary" onclick="updateStock()">💾 Update Inventory</button>
+            <div id="upd-msg" style="margin-top:1rem;"></div>
+          </div>
+        </div>
+
+        <!-- DONATIONS TAB -->
+        <div class="tab-panel" id="tab-donations">
+          <div class="card">
+            <div class="card-title">📋 Donations Received</div>
+            ${donations.length === 0 ? `<div class="empty-state"><div class="empty-icon">🩸</div><p>No donations recorded yet.</p></div>` : `
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Donor</th><th>Blood Group</th><th>Units</th><th>Notes</th></tr></thead>
+                <tbody>
+                  ${[...donations].reverse().map(d => `<tr>
+                    <td>${new Date(d.createdAt).toLocaleDateString()}</td>
+                    <td>${d.donorName}</td>
+                    <td><span class="badge badge-red">${d.bloodGroup}</span></td>
+                    <td>${d.units}</td>
+                    <td>${d.notes || '—'}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`}
+          </div>
+        </div>
+
+        <!-- EMERGENCY ALERTS TAB -->
+        <div class="tab-panel" id="tab-emergencies">
+          <div class="card">
+            <div class="card-title">🚨 Emergency Alerts Received</div>
+            ${emergencies.length === 0 ? `<div class="empty-state"><div class="empty-icon">🚨</div><p>No emergency alerts received yet.</p></div>` :
+              [...emergencies].reverse().map(e => `
+              <div class="emergency-card">
+                <div class="emg-header"><div class="pulse-dot"></div><strong>EMERGENCY: ${e.bloodGroup} — ${e.unitsNeeded} units needed</strong></div>
+                <div style="font-size:0.9rem;">
+                  <strong>Patient:</strong> ${e.patientName}<br/>
+                  <strong>Contact:</strong> 📞 ${e.patientPhone || 'N/A'} &nbsp;|&nbsp; ✉️ ${e.patientEmail}<br/>
+                  <strong>Received:</strong> ${new Date(e.createdAt).toLocaleString()}<br/>
+                  <strong>Status:</strong> <span class="badge badge-${e.status === 'active' ? 'red' : 'green'}">${e.status}</span>
+                </div>
+                <button class="btn btn-success btn-sm" style="margin-top:0.75rem;" onclick="fulfillEmergency('${e.id}')">✅ Mark Fulfilled</button>
+              </div>`).join('')
+            }
+          </div>
+        </div>
+
+        <!-- DONOR PASSPORT TAB -->
+        <div class="tab-panel" id="tab-passport">
+          <div class="card">
+            <div class="card-title">🪪 Donor Passport Management</div>
+            <p style="font-size:0.9rem;color:var(--gray-400);margin-bottom:1rem;">Create or update donor passports. Donors and admin can view the saved passport profiles.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Select Donor</label>
+                <select id="passport_donor_select" onchange="loadPassportForDonor()" style="width:100%;padding:0.6rem;">
+                  <option value="">-- Select Donor --</option>
+                  ${DB.getUsersByRole('donor').map(d => `<option value="${d.id}">${d.name} (${d.email})</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Name</label><input type="text" id="passport_name" placeholder="Donor Name" style="width:100%;" /></div>
+              <div class="form-group"><label>Blood Group</label><input type="text" id="passport_bg" placeholder="O+" style="width:100%;" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Age</label><input type="number" id="passport_age" min="18" max="65" style="width:100%;" /></div>
+              <div class="form-group"><label>Weight</label><input type="number" id="passport_weight" min="40" style="width:100%;" /></div>
+              <div class="form-group"><label>Hemoglobin</label><input type="number" id="passport_hb" min="0" step="0.1" style="width:100%;" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>BP</label><select id="passport_bp" style="width:100%;"><option value="normal">Normal</option><option value="elevated">Elevated</option><option value="high">High</option></select></div>
+              <div class="form-group"><label>Last Donation</label><input type="date" id="passport_lastdon" style="width:100%;" /></div>
+              <div class="form-group"><label>Total Donations</label><input type="number" id="passport_total" min="0" style="width:100%;" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Medications</label><select id="passport_meds" style="width:100%;"><option value="none">None</option><option value="mild">Mild</option><option value="major">Major</option></select></div>
+              <div class="form-group"><label>Illness</label><select id="passport_illness" style="width:100%;"><option value="none">None</option><option value="mild">Mild</option><option value="serious">Serious</option></select></div>
+              <div class="form-group"><label>City</label><input type="text" id="passport_city" placeholder="City" style="width:100%;" /></div>
+            </div>
+            <button class="btn btn-primary" onclick="savePassportFromForm()">💾 Save Donor Passport</button>
+            <div id="passport_status" style="margin-top:0.8rem;color:var(--gray-400);"></div>
+          </div>
+        </div>
+
+        <!-- DISPATCH TAB -->
+        <div class="tab-panel" id="tab-dispatch">
+          <div class="card">
+            <div class="card-title">📦 Dispatch Blood to Hospital</div>
+            <div class="alert alert-info">When you dispatch blood to a hospital, it will be deducted from your inventory.</div>
+            <div class="form-group">
+              <label>Select Hospital</label>
+              <select id="disp_hospital">
+                ${DB.getUsersByRole('hospital').map(h => `<option value="${h.id}">${h.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Blood Group</label>
+                <select id="disp_bg">${BLOOD_GROUPS.map(bg => `<option>${bg}</option>`).join('')}</select>
+              </div>
+              <div class="form-group">
+                <label>Units to Dispatch</label>
+                <input type="number" id="disp_units" min="1" value="1" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" id="disp_notes" placeholder="Emergency dispatch, routine supply, etc." />
+            </div>
+            <button class="btn btn-primary" onclick="dispatchBlood()">📦 Dispatch</button>
+            <div id="disp-msg" style="margin-top:1rem;"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateStock() {
+      const bg = document.getElementById('upd_bg').value;
+      const action = document.getElementById('upd_action').value;
+      const units = parseInt(document.getElementById('upd_units').value);
+      const expiry = document.getElementById('upd_expiry').value;
+      if (!units || units < 1) { alert('Enter valid unit count.'); return; }
+      const expiryDate = action === 'add' && expiry ? expiry : null;
+      DB.updateStock(user.id, bg, action === 'add' ? units : -units, expiryDate);
+      document.getElementById('upd-msg').innerHTML = `<div class="alert alert-success">✅ Inventory updated: ${action === 'add' ? '+' : '-'}${units} units of ${bg}${expiryDate ? ' (expiry ' + expiryDate + ')' : ''}.</div>`;
+      renderDashboard();
+    }
+
+    function dispatchBlood() {
+      const hospitalId = document.getElementById('disp_hospital').value;
+      const bg = document.getElementById('disp_bg').value;
+      const units = parseInt(document.getElementById('disp_units').value);
+      const notes = document.getElementById('disp_notes').value;
+      const myStock = DB.getStockByOwner(user.id).find(s => s.bloodGroup === bg);
+      if (!myStock || myStock.units < units) {
+        alert(`Insufficient ${bg} in inventory. Available: ${myStock ? myStock.units : 0} units.`);
+        return;
+      }
+      const hospital = DB.getUserById(hospitalId);
+      // Deduct from blood bank, add to hospital
+      DB.updateStock(user.id, bg, -units);
+      DB.updateStock(hospitalId, bg, units);
+      // Log as donation
+      DB.addDonation({
+        donorId: user.id,
+        donorName: user.name,
+        receiverId: hospitalId,
+        receiverName: hospital.name,
+        receiverType: 'hospital',
+        bloodGroup: bg,
+        units,
+        notes: notes || 'Dispatch from blood bank'
+      });
+      document.getElementById('disp-msg').innerHTML = `<div class="alert alert-success">✅ ${units} unit(s) of ${bg} dispatched to ${hospital.name}.</div>`;
+      renderDashboard();
+    }
+
+    function fulfillEmergency(emergencyId) {
+      DB.updateEmergency(emergencyId, { status: 'fulfilled', fulfilledAt: new Date().toISOString() });
+      alert('✅ Emergency marked as fulfilled.');
+      renderDashboard();
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    renderDashboard();
+    setInterval(renderDashboard, 10000); // Real-time auto-refresh every 10 seconds
+
+  </script>
+</body>
+</html>

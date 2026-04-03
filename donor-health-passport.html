@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donor Health Passport — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --cream: #faf7f2;
+      --warm-dark: #1a1208;
+      --deep-red: #b91c1c;
+      --red-light: #fecaca;
+      --gold: #d97706;
+      --gold-light: #fef3c7;
+      --success: #15803d;
+      --muted: #6b5744;
+      --border: #e7ddd4;
+      --card-bg: #ffffff;
+      --shadow: 0 4px 24px rgba(26,18,8,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--warm-dark);
+      min-height: 100vh;
+    }
+
+    .passport-nav {
+      background: var(--warm-dark);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .passport-nav .brand { color: #fecaca; font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
+    .passport-nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.88rem; margin-left: 1.5rem; }
+    .passport-nav a:hover { color: white; }
+
+    .hero-banner {
+      background: linear-gradient(135deg, var(--warm-dark) 0%, #3b1a0a 100%);
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-banner::before {
+      content: '🩸';
+      position: absolute;
+      font-size: 15rem;
+      opacity: 0.04;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hero-banner h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.6rem;
+      margin-bottom: 0.5rem;
+      color: var(--red-light);
+    }
+
+    .hero-banner p { color: rgba(255,255,255,0.6); font-size: 1rem; }
+
+    .main-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .main-wrap { grid-template-columns: 1fr; padding: 1rem; }
+    }
+
+    /* PASSPORT CARD */
+    .passport-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: sticky;
+      top: 1rem;
+    }
+
+    .passport-header {
+      background: linear-gradient(135deg, var(--deep-red), #7f1d1d);
+      padding: 1.5rem;
+      color: white;
+      position: relative;
+    }
+
+    .passport-header::after {
+      content: '🩸';
+      position: absolute;
+      right: 1.2rem;
+      top: 1rem;
+      font-size: 2.5rem;
+      opacity: 0.3;
+    }
+
+    .passport-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+
+    .passport-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.7rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .passport-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .passport-body { padding: 1.5rem; }
+
+    .passport-blood {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      background: var(--deep-red);
+      color: white;
+      border-radius: 50%;
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      margin: 0 auto 1.2rem;
+      box-shadow: 0 4px 16px rgba(185,28,28,0.25);
+    }
+
+    .passport-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .pd-item { border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; }
+    .pd-item .pd-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; }
+    .pd-item .pd-value { font-size: 0.9rem; font-weight: 600; margin-top: 0.2rem; }
+
+    /* Score Ring */
+    .score-section {
+      text-align: center;
+      margin-bottom: 1.2rem;
+      padding: 1.2rem;
+      background: var(--cream);
+      border-radius: 12px;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 0.5rem;
+    }
+
+    .score-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .score-ring .score-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .score-number {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      color: var(--deep-red);
+      line-height: 1;
+    }
+
+    .score-label-sm { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; }
+
+    /* Badges */
+    .badges-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1.2rem;
+    }
+
+    .badge-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: var(--gold-light);
+      color: var(--gold);
+      border: 1px solid #fde68a;
+      padding: 0.3rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-chip.locked {
+      background: #f5f5f5;
+      color: #aaa;
+      border-color: #e5e5e5;
+    }
+
+    /* QR-like section */
+    .passport-qr {
+      background: var(--warm-dark);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 14px);
+      grid-template-rows: repeat(10, 14px);
+      gap: 2px;
+      justify-content: center;
+      margin: 0 auto 0.5rem;
+    }
+
+    .qr-cell {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+    }
+
+    .qr-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* RIGHT PANEL */
+    .right-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    .panel-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Health Form */
+    .health-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) { .health-form-grid { grid-template-columns: 1fr; } }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .fg label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .fg input, .fg select {
+      background: var(--cream);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      color: var(--warm-dark);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .fg input:focus, .fg select:focus { border-color: var(--deep-red); }
+
+    .btn-passport {
+      background: var(--deep-red);
+      color: white;
+      border: none;
+      padding: 0.7rem 1.6rem;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.5rem;
+    }
+
+    .btn-passport:hover { background: #991b1b; transform: translateY(-1px); }
+
+    /* Eligibility meter */
+    .eligibility-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .elig-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .elig-item.pass { background: #f0fdf4; border-color: #bbf7d0; }
+    .elig-item.fail { background: #fef2f2; border-color: #fecaca; }
+    .elig-item.neutral { background: var(--cream); }
+
+    .elig-icon { font-size: 1.1rem; flex-shrink: 0; width: 24px; text-align: center; }
+    .elig-label { flex: 1; font-size: 0.88rem; font-weight: 500; }
+    .elig-val { font-size: 0.78rem; color: var(--muted); }
+
+    /* Donation history chart */
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+      height: 80px;
+      margin: 0.5rem 0;
+    }
+
+    .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; flex: 1; }
+
+    .chart-bar {
+      width: 100%;
+      background: #fecaca;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.6s ease;
+      min-height: 2px;
+      max-height: 70px;
+      cursor: pointer;
+    }
+
+    .chart-bar:hover { background: var(--deep-red); }
+    .chart-bar.active { background: var(--deep-red); }
+
+    .chart-bar-label { font-size: 0.7rem; color: var(--muted); text-align: center; }
+
+    .msg-toast {
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      margin-top: 0.8rem;
+      display: none;
+    }
+
+    .msg-toast.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; display: block; }
+    .msg-toast.error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: block; }
+  </style>
+</head>
+<body>
+
+<nav class="passport-nav">
+  <div class="brand">🩸 BloodConnect</div>
+  <div>
+    <a href="index_.html">Home</a>
+    <a href="blood-expiry-tracker.html">🩸 Expiry Tracker</a>
+    <a href="live-network-map.html">🗺️ Live Map</a>
+    <a href="donor-login.html">Donor Login</a>
+  </div>
+</nav>
+
+<div class="hero-banner">
+  <h1>Donor Health Passport</h1>
+  <p>Your personalized donation profile — track eligibility, earn badges, and carry your donation history</p>
+</div>
+
+<div class="main-wrap">
+
+  <!-- LEFT: PASSPORT CARD -->
+  <div>
+    <div class="passport-card">
+      <div class="passport-header">
+        <div class="passport-label">BloodConnect — Donor Passport</div>
+        <div class="passport-name" id="pc-name">—</div>
+        <div class="passport-id" id="pc-id">ID: —</div>
+      </div>
+      <div class="passport-body">
+
+        <div class="passport-blood" id="pc-blood">?</div>
+
+        <!-- Score Ring -->
+        <div class="score-section">
+          <div class="passport-label" style="margin-bottom:0.5rem;">Donor Health Score</div>
+          <div class="score-ring">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#f5e4dc" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#b91c1c" stroke-width="8"
+                stroke-dasharray="264" id="score-circle" stroke-dashoffset="264"
+                stroke-linecap="round" style="transition:stroke-dashoffset 1s ease;"/>
+            </svg>
+            <div class="score-text">
+              <div class="score-number" id="score-num">—</div>
+              <div class="score-label-sm">/ 100</div>
+            </div>
+          </div>
+          <div style="font-size:0.82rem;color:var(--muted);" id="score-desc">Fill in your health profile</div>
+        </div>
+
+        <!-- Details -->
+        <div class="passport-detail-grid" id="pc-details">
+          <div class="pd-item">
+            <div class="pd-label">Blood Group</div>
+            <div class="pd-value" id="pd-bg">—</div>
+          </div>
+          <div class="pd-item">
+            <div class="pd-label">Donations</div>
+            <div class="pd-value" id="pd-donations">0</div>
+          </div>
+          <div class="pd-item">
+            <div class="pd-label">Last Donated</div>
+            <div class="pd-value" id="pd-last">—</div>
+          </div>
+          <div class="pd-item">
+            <div class="pd-label">Next Eligible</div>
+            <div class="pd-value" id="pd-next">—</div>
+          </div>
+          <div class="pd-item">
+            <div class="pd-label">Lives Impacted</div>
+            <div class="pd-value" id="pd-lives" style="color:var(--deep-red);">0</div>
+          </div>
+          <div class="pd-item">
+            <div class="pd-label">Donor Since</div>
+            <div class="pd-value" id="pd-since">—</div>
+          </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="badges-row" id="badges-row">
+          <!-- JS rendered -->
+        </div>
+
+      </div>
+
+      <!-- QR-like fingerprint -->
+      <div class="passport-qr">
+        <div class="qr-grid" id="qr-grid"></div>
+        <div class="qr-text" id="qr-text">BloodConnect Donor Passport</div>
+      </div>
+    </div>
+
+    <button class="btn-passport" style="width:100%;margin-top:1rem;background:var(--warm-dark);" onclick="downloadPassport()">⬇ Download Passport Card</button>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- Health Profile Form -->
+    <div class="panel-card">
+      <div class="panel-title">🩺 Health Profile</div>
+      <div class="health-form-grid">
+        <div class="fg">
+          <label>Full Name</label>
+          <input type="text" id="hp-name" placeholder="Rahul Sharma" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>Blood Group</label>
+          <select id="hp-bg" onchange="updatePassport()">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Age</label>
+          <input type="number" id="hp-age" placeholder="25" min="18" max="65" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>Weight (kg)</label>
+          <input type="number" id="hp-weight" placeholder="60" min="45" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>Hemoglobin (g/dL)</label>
+          <input type="number" id="hp-hb" placeholder="13.5" step="0.1" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>Blood Pressure</label>
+          <select id="hp-bp" onchange="updatePassport()">
+            <option value="">Select</option>
+            <option value="normal">Normal (90-120/60-80)</option>
+            <option value="elevated">Elevated</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Last Donation Date</label>
+          <input type="date" id="hp-lastdon" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>Total Lifetime Donations</label>
+          <input type="number" id="hp-total" placeholder="3" min="0" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>Any Medications?</label>
+          <select id="hp-meds" onchange="updatePassport()">
+            <option value="none">None</option>
+            <option value="mild">Mild (vitamins, supplements)</option>
+            <option value="major">Major medications</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Recent Illness (past 30d)?</label>
+          <select id="hp-illness" onchange="updatePassport()">
+            <option value="none">None</option>
+            <option value="mild">Mild cold/flu (recovered)</option>
+            <option value="serious">Serious illness</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Donor Since (Year)</label>
+          <input type="number" id="hp-since" placeholder="2021" min="1990" max="2025" oninput="updatePassport()" />
+        </div>
+        <div class="fg">
+          <label>City</label>
+          <input type="text" id="hp-city" placeholder="Mumbai" oninput="updatePassport()" />
+        </div>
+      </div>
+      <button class="btn-passport" onclick="saveProfile()">💾 Save Health Profile</button>
+      <div id="profile-msg" class="msg-toast"></div>
+    </div>
+
+    <!-- Eligibility Checker -->
+    <div class="panel-card">
+      <div class="panel-title">✅ Donation Eligibility Check</div>
+      <div class="eligibility-section" id="eligibility-list">
+        <div style="color:var(--muted);font-size:0.9rem;">Fill in your health profile to see eligibility status.</div>
+      </div>
+    </div>
+
+    <!-- Donation Activity Chart -->
+    <div class="panel-card">
+      <div class="panel-title">📊 Donation Activity (Last 12 Months)</div>
+      <div class="chart-bars" id="activity-chart"></div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;" id="activity-note">Log donations to see activity chart.</div>
+    </div>
+
+    <!-- Badge Gallery -->
+    <div class="panel-card">
+      <div class="panel-title">🏅 Achievement Badges</div>
+      <div id="badge-gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.8rem;"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="db.js"></script>
+<script src="auth.js"></script>
+<script>
+  const PASSPORT_KEY = 'bms_health_passport';
+
+  const ALL_BADGES = [
+    { id: 'first-drop', icon: '🩸', name: 'First Drop', desc: 'Made your first donation', req: d => d >= 1 },
+    { id: 'triple-hero', icon: '🥉', name: 'Triple Hero', desc: '3 lifetime donations', req: d => d >= 3 },
+    { id: 'life-saver-5', icon: '🥈', name: 'Life Saver', desc: '5 lifetime donations', req: d => d >= 5 },
+    { id: 'champion-10', icon: '🥇', name: 'Champion', desc: '10 lifetime donations', req: d => d >= 10 },
+    { id: 'legend-25', icon: '🏆', name: 'Legend', desc: '25 lifetime donations', req: d => d >= 25 },
+    { id: 'universal', icon: '🌍', name: 'Universal Hero', desc: 'O- blood group donor', req: (d,p) => p.bloodGroup === 'O-' },
+    { id: 'rare', icon: '💎', name: 'Rare Essence', desc: 'Rare blood group (AB-, B-)', req: (d,p) => ['AB-','B-'].includes(p.bloodGroup) },
+    { id: 'veteran', icon: '⭐', name: 'Veteran', desc: 'Donating for 3+ years', req: (d,p) => p.since && (new Date().getFullYear() - parseInt(p.since)) >= 3 },
+    { id: 'healthy', icon: '💪', name: 'Healthy Hero', desc: 'Health score above 80', req: (d,p) => (p.score||0) >= 80 },
+  ];
+
+  function loadProfile() {
+    const user = Auth.getCurrentUser ? Auth.getCurrentUser() : null;
+    if (user && user.role === 'donor') {
+      const dbPassport = DB.getPassportByDonorId(user.id);
+      if (dbPassport) {
+        return dbPassport;
+      }
+    }
+    try { return JSON.parse(localStorage.getItem(PASSPORT_KEY)) || {}; } catch { return {}; }
+  }
+
+  function saveProfileData(data) {
+    const user = Auth.getCurrentUser ? Auth.getCurrentUser() : null;
+    if (user && user.role === 'donor') {
+      const payload = {
+        ...data,
+        donorId: user.id,
+        donorName: user.name,
+        donorEmail: user.email,
+        createdBy: user.id,
+        creatorRole: 'donor'
+      };
+      DB.upsertPassport(payload);
+    }
+    localStorage.setItem(PASSPORT_KEY, JSON.stringify(data));
+  }
+
+  function getFormData() {
+    return {
+      name: document.getElementById('hp-name').value.trim(),
+      bloodGroup: document.getElementById('hp-bg').value,
+      age: parseInt(document.getElementById('hp-age').value) || 0,
+      weight: parseInt(document.getElementById('hp-weight').value) || 0,
+      hb: parseFloat(document.getElementById('hp-hb').value) || 0,
+      bp: document.getElementById('hp-bp').value,
+      lastDonation: document.getElementById('hp-lastdon').value,
+      totalDonations: parseInt(document.getElementById('hp-total').value) || 0,
+      meds: document.getElementById('hp-meds').value,
+      illness: document.getElementById('hp-illness').value,
+      since: document.getElementById('hp-since').value,
+      city: document.getElementById('hp-city').value.trim(),
+    };
+  }
+
+  function calculateScore(p) {
+    let score = 0;
+    // Age (18-60 ideal)
+    if (p.age >= 18 && p.age <= 60) score += 15;
+    else if (p.age > 60 && p.age <= 65) score += 8;
+    // Weight
+    if (p.weight >= 55) score += 15;
+    else if (p.weight >= 50) score += 8;
+    // Hemoglobin
+    if (p.hb >= 12.5) score += 20;
+    else if (p.hb >= 11) score += 10;
+    // BP
+    if (p.bp === 'normal') score += 15;
+    else if (p.bp === 'elevated') score += 7;
+    // Medications
+    if (p.meds === 'none') score += 10;
+    else if (p.meds === 'mild') score += 6;
+    // Illness
+    if (p.illness === 'none') score += 10;
+    else if (p.illness === 'mild') score += 4;
+    // Donations
+    if (p.totalDonations >= 5) score += 10;
+    else if (p.totalDonations >= 1) score += 5;
+    // Last donation cooldown
+    if (p.lastDonation) {
+      const days = Math.floor((Date.now() - new Date(p.lastDonation)) / 86400000);
+      if (days >= 90) score += 5;
+    } else {
+      score += 5; // Never donated is fine
+    }
+
+    return Math.min(100, score);
+  }
+
+  function getEligibility(p) {
+    const checks = [];
+    const ageOk = p.age >= 18 && p.age <= 65;
+    checks.push({ label: 'Age (18–65 years)', pass: ageOk, val: p.age ? `${p.age} years` : '—', neutral: !p.age });
+
+    const weightOk = p.weight >= 50;
+    checks.push({ label: 'Weight (≥50 kg)', pass: weightOk, val: p.weight ? `${p.weight} kg` : '—', neutral: !p.weight });
+
+    const hbOk = p.hb >= 12.5;
+    checks.push({ label: 'Hemoglobin (≥12.5 g/dL)', pass: hbOk, val: p.hb ? `${p.hb} g/dL` : '—', neutral: !p.hb });
+
+    const bpOk = p.bp === 'normal';
+    checks.push({ label: 'Blood Pressure (Normal)', pass: bpOk, val: p.bp || '—', neutral: !p.bp });
+
+    const medsOk = p.meds !== 'major';
+    checks.push({ label: 'No major medications', pass: medsOk, val: p.meds || '—', neutral: !p.meds });
+
+    const illOk = p.illness === 'none';
+    checks.push({ label: 'No recent serious illness', pass: illOk, val: p.illness || '—', neutral: !p.illness });
+
+    let cooldownOk = true;
+    let cooldownVal = '✓ Ready';
+    if (p.lastDonation) {
+      const days = Math.floor((Date.now() - new Date(p.lastDonation)) / 86400000);
+      cooldownOk = days >= 90;
+      cooldownVal = cooldownOk ? `${days} days since last` : `${90 - days} more days needed`;
+    }
+    checks.push({ label: '90-day cooldown met', pass: cooldownOk, val: cooldownVal });
+
+    return checks;
+  }
+
+  function getNextEligibleDate(lastDonation) {
+    if (!lastDonation) return 'Ready Now';
+    const d = new Date(lastDonation);
+    d.setDate(d.getDate() + 90);
+    if (d <= new Date()) return 'Ready Now';
+    return d.toLocaleDateString();
+  }
+
+  function renderEarnedBadges(p) {
+    const total = p.totalDonations || 0;
+    const earned = ALL_BADGES.filter(b => b.req(total, p));
+    return earned.map(b => `<div class="badge-chip"><span>${b.icon}</span>${b.name}</div>`).join('');
+  }
+
+  function renderBadgeGallery(p) {
+    const total = p.totalDonations || 0;
+    document.getElementById('badge-gallery').innerHTML = ALL_BADGES.map(b => {
+      const earned = b.req(total, p);
+      return `
+        <div style="text-align:center;padding:0.8rem;border-radius:10px;background:${earned ? '#fef9ee' : '#f9f9f9'};border:1px solid ${earned ? '#fde68a' : '#e5e5e5'};">
+          <div style="font-size:1.8rem;margin-bottom:0.3rem;${earned ? '' : 'filter:grayscale(1);opacity:0.35;'}">${b.icon}</div>
+          <div style="font-size:0.78rem;font-weight:600;color:${earned ? '#92400e' : '#aaa'};">${b.name}</div>
+          <div style="font-size:0.7rem;color:${earned ? '#d97706' : '#ccc'};margin-top:0.2rem;">${b.desc}</div>
+          ${earned ? '<div style="font-size:0.65rem;color:var(--success);margin-top:0.3rem;font-weight:600;">EARNED ✓</div>' : '<div style="font-size:0.65rem;color:#ccc;margin-top:0.3rem;">Locked 🔒</div>'}
+        </div>`;
+    }).join('');
+  }
+
+  function generateQR(seed) {
+    const grid = document.getElementById('qr-grid');
+    grid.innerHTML = '';
+    // Deterministic pseudo-QR from seed
+    const hash = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 42);
+    for (let i = 0; i < 100; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'qr-cell';
+      const filled = ((hash * (i + 7) * 31) % 100) < 45;
+      cell.style.background = filled ? 'white' : 'transparent';
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderActivityChart(donations) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const now = new Date();
+    const counts = Array(12).fill(0);
+    // Simulate monthly donations from total count
+    const total = donations;
+    for (let i = 0; i < total; i++) {
+      counts[Math.floor(Math.random() * 12)]++;
+    }
+    const max = Math.max(...counts, 1);
+    const chart = document.getElementById('activity-chart');
+    chart.innerHTML = months.map((m, i) => {
+      const h = Math.round((counts[i] / max) * 70);
+      const isNow = i === now.getMonth();
+      return `
+        <div class="chart-bar-wrap">
+          <div class="chart-bar ${isNow ? 'active' : ''}" style="height:${h}px;" title="${counts[i]} donation(s) in ${m}"></div>
+          <div class="chart-bar-label">${m.slice(0,1)}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('activity-note').textContent =
+      total > 0 ? `${total} total lifetime donation(s) across all time` : 'No donations recorded yet.';
+  }
+
+  function updatePassport() {
+    const p = getFormData();
+    p.score = calculateScore(p);
+
+    // Passport card
+    document.getElementById('pc-name').textContent = p.name || 'Your Name';
+    document.getElementById('pc-blood').textContent = p.bloodGroup || '?';
+    document.getElementById('pc-id').textContent = 'ID: BC-' + (p.name || 'DONOR').replace(/\s/g,'').toUpperCase().slice(0,4) + '-' + (p.bloodGroup||'XX').replace(/\+/,'P').replace(/-/,'N');
+    document.getElementById('pd-bg').textContent = p.bloodGroup || '—';
+    document.getElementById('pd-donations').textContent = p.totalDonations || 0;
+    document.getElementById('pd-lives').textContent = (p.totalDonations || 0) * 3; // each donation saves ~3 lives
+    document.getElementById('pd-last').textContent = p.lastDonation ? new Date(p.lastDonation).toLocaleDateString() : '—';
+    document.getElementById('pd-next').textContent = getNextEligibleDate(p.lastDonation);
+    document.getElementById('pd-since').textContent = p.since ? `Since ${p.since}` : '—';
+    document.getElementById('qr-text').textContent = 'ID: ' + (p.name || 'DONOR').toUpperCase();
+
+    // Score ring
+    const pct = p.score / 100;
+    const circumference = 264;
+    const offset = circumference * (1 - pct);
+    document.getElementById('score-circle').style.strokeDashoffset = offset;
+    document.getElementById('score-num').textContent = p.score;
+    const desc = p.score >= 80 ? 'Excellent — Highly eligible!' : p.score >= 60 ? 'Good — Eligible to donate' : p.score >= 40 ? 'Moderate — Some factors to improve' : 'Poor — Not eligible currently';
+    document.getElementById('score-desc').textContent = desc;
+
+    // Eligibility
+    const checks = getEligibility(p);
+    document.getElementById('eligibility-list').innerHTML = checks.map(c => `
+      <div class="elig-item ${c.neutral ? 'neutral' : c.pass ? 'pass' : 'fail'}">
+        <div class="elig-icon">${c.neutral ? '○' : c.pass ? '✅' : '❌'}</div>
+        <div class="elig-label">${c.label}</div>
+        <div class="elig-val">${c.val}</div>
+      </div>`).join('');
+
+    // Badges on passport
+    document.getElementById('badges-row').innerHTML = renderEarnedBadges(p);
+
+    // QR
+    generateQR((p.name || 'donor') + (p.bloodGroup || ''));
+
+    // Badge gallery
+    renderBadgeGallery(p);
+
+    // Chart
+    renderActivityChart(p.totalDonations || 0);
+  }
+
+  function saveProfile() {
+    const p = getFormData();
+    if (!p.name || !p.bloodGroup) {
+      showMsg('profile-msg', 'error', 'Please enter at least your name and blood group.');
+      return;
+    }
+    p.score = calculateScore(p);
+    saveProfileData(p);
+    showMsg('profile-msg', 'success', '✅ Health passport saved! Your donor card has been updated.');
+    updatePassport();
+  }
+
+  function loadSavedProfile() {
+    const p = loadProfile();
+    if (!p.name) return;
+    document.getElementById('hp-name').value = p.name || '';
+    document.getElementById('hp-bg').value = p.bloodGroup || '';
+    document.getElementById('hp-age').value = p.age || '';
+    document.getElementById('hp-weight').value = p.weight || '';
+    document.getElementById('hp-hb').value = p.hb || '';
+    document.getElementById('hp-bp').value = p.bp || '';
+    document.getElementById('hp-lastdon').value = p.lastDonation || '';
+    document.getElementById('hp-total').value = p.totalDonations || '';
+    document.getElementById('hp-meds').value = p.meds || 'none';
+    document.getElementById('hp-illness').value = p.illness || 'none';
+    document.getElementById('hp-since').value = p.since || '';
+    document.getElementById('hp-city').value = p.city || '';
+    updatePassport();
+  }
+
+  function syncWithDB() {
+    const u = Auth.getCurrentUser();
+    if (!u || u.role !== 'donor') return;
+
+    const profile = loadProfile();
+    const dbPassport = DB.getPassportByDonorId(u.id);
+    if (dbPassport) {
+      Object.assign(profile, dbPassport);
+    }
+
+    profile.name = profile.name || u.name;
+    profile.bloodGroup = profile.bloodGroup || u.bloodGroup;
+    profile.city = profile.city || u.address;
+
+    const donations = DB.getDonationsByDonor(u.id);
+    if (donations.length > 0) {
+      const ordered = [...donations].sort((a,b) => new Date(b.donationDate || b.createdAt) - new Date(a.donationDate || a.createdAt));
+      const last = ordered[0];
+      profile.lastDonation = last.donationDate || last.createdAt;
+      profile.totalDonations = donations.length;
+      profile.since = profile.since || (u.createdAt ? new Date(u.createdAt).getFullYear() : new Date().getFullYear());
+    }
+
+    saveProfileData(profile);
+    loadSavedProfile();
+    showMsg('profile-msg', 'success', `✅ Profile synced with database and donation history (${donations.length} donation(s))`);
+  }
+
+  function showMsg(id, type, msg) {
+    const el = document.getElementById(id);
+    el.className = `msg-toast ${type}`;
+    el.textContent = msg;
+    setTimeout(() => { el.className = 'msg-toast'; el.textContent = ''; }, 4000);
+  }
+
+  function downloadPassport() {
+    const p = loadProfile();
+    const name = p.name || 'Donor';
+    const info = `BloodConnect Donor Health Passport
+=====================================
+Name: ${name}
+Blood Group: ${p.bloodGroup || '—'}
+Donor ID: BC-${(name).replace(/\s/g,'').toUpperCase().slice(0,4)}-${(p.bloodGroup||'XX').replace(/\+/,'P').replace(/-/,'N')}
+Health Score: ${p.score || '—'}/100
+Total Donations: ${p.totalDonations || 0}
+Lives Impacted: ${(p.totalDonations || 0) * 3}
+Last Donation: ${p.lastDonation || '—'}
+Next Eligible: ${getNextEligibleDate(p.lastDonation)}
+Donor Since: ${p.since || '—'}
+City: ${p.city || '—'}
+
+Eligibility Status:
+${getEligibility(p).map(c => `  ${c.pass ? '✓' : '✗'} ${c.label}: ${c.val}`).join('\n')}
+
+Generated: ${new Date().toLocaleString()}
+BloodConnect — Every Drop Counts 🩸`;
+
+    const a = document.createElement('a');
+    a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(info);
+    a.download = `${name.replace(/\s/g,'_')}_BloodConnect_Passport.txt`;
+    a.click();
+  }
+
+  // Init
+  DB.init();
+  loadSavedProfile();
+  syncWithDB();
+  renderBadgeGallery({});
+  renderActivityChart(0);
+</script>
+</body>
+</html>

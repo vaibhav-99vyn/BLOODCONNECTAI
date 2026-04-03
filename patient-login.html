@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Login — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <h1>🏥 BloodConnect</h1>
+        <p>Patient Portal</p>
+      </div>
+      <h2>Patient Login</h2>
+      <div id="msg"></div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="patient@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Your password" />
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" onclick="login()">Login</button>
+
+      <hr class="divider" />
+      <p style="font-size:0.85rem;color:var(--gray-400);margin-bottom:0.8rem;text-align:center;">New Patient? Register below</p>
+      <button class="btn btn-secondary btn-full" onclick="showRegister()">➕ Register as Patient</button>
+
+      <!-- Inline Register -->
+      <div id="registerForm" style="display:none;margin-top:1.5rem;">
+        <h2 style="font-size:1.4rem;margin-bottom:1rem;">Quick Register</h2>
+        <div class="form-group"><label>Name</label><input type="text" id="r_name" placeholder="Your full name" /></div>
+        <div class="form-group"><label>Email</label><input type="email" id="r_email" placeholder="email@example.com" /></div>
+        <div class="form-group"><label>Password</label><input type="password" id="r_password" placeholder="Min 6 chars" /></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Blood Group</label>
+            <select id="r_bloodGroup">
+              <option value="">Select</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>O+</option><option>O-</option>
+              <option>AB+</option><option>AB-</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Phone</label><input type="tel" id="r_phone" placeholder="9876543210" /></div>
+        </div>
+        <div class="form-group"><label>Address</label><input type="text" id="r_address" placeholder="City, State" /></div>
+        <button class="btn btn-primary btn-full" onclick="register()">Create Account</button>
+      </div>
+
+      <div class="auth-switch" style="margin-top:1rem;">
+        <a href="index .html" style="color:var(--gray-400);">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    DB.init();
+    function login() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!email || !password) { showMsg('error', 'Please fill in both fields.'); return; }
+      const result = Auth.login(email, password);
+      if (!result.success) { showMsg('error', result.message); return; }
+      if (result.user.role !== 'patient') { showMsg('error', 'This login is for patients only.'); return; }
+      window.location.href = 'patient-dashboard.html';
+    }
+    function showRegister() {
+      document.getElementById('registerForm').style.display = 'block';
+    }
+    function register() {
+      const name = document.getElementById('r_name').value.trim();
+      const email = document.getElementById('r_email').value.trim();
+      const password = document.getElementById('r_password').value.trim();
+      const bloodGroup = document.getElementById('r_bloodGroup').value;
+      const phone = document.getElementById('r_phone').value.trim();
+      const address = document.getElementById('r_address').value.trim();
+      if (!name || !email || !password || !bloodGroup || !phone) { showMsg('error', 'Please fill all fields.'); return; }
+      const result = Auth.register({ role: 'patient', name, email, password, bloodGroup, phone, address });
+      if (!result.success) { showMsg('error', result.message); return; }
+      showMsg('success', 'Registered! Logging you in...');
+      setTimeout(() => {
+        Auth.login(email, password);
+        window.location.href = 'patient-dashboard.html';
+      }, 1000);
+    }
+    function showMsg(type, text) {
+      document.getElementById('msg').innerHTML = `<div class="alert alert-${type === 'error' ? 'error' : 'success'}">${text}</div>`;
+    }
+  </script>
+</body>
+</html>

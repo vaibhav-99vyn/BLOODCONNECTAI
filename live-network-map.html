@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Blood Network Map — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap');
+
+    :root {
+      --night: #060d1a;
+      --night-2: #0d1b2e;
+      --night-3: #162236;
+      --night-4: #1d2f47;
+      --red: #ff3b5c;
+      --red-glow: rgba(255,59,92,0.2);
+      --blue: #3b82f6;
+      --blue-glow: rgba(59,130,246,0.2);
+      --green: #10b981;
+      --green-glow: rgba(16,185,129,0.2);
+      --yellow: #f59e0b;
+      --yellow-glow: rgba(245,158,11,0.2);
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --border: rgba(255,255,255,0.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--night);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .map-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 1.5rem;
+      background: var(--night-2);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .map-nav .brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--red);
+    }
+
+    .map-nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; margin-left: 1.2rem; }
+    .map-nav a:hover { color: var(--text); }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--green);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
+      50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+    }
+
+    /* MAP AREA */
+    .map-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 260px;
+      height: calc(100vh - 52px);
+    }
+
+    @media (max-width: 900px) {
+      .map-layout { grid-template-columns: 1fr; grid-template-rows: auto 420px auto; height: auto; }
+      .left-panel, .right-panel { max-height: 280px; overflow-y: auto; }
+    }
+
+    /* LEFT PANEL */
+    .left-panel {
+      background: var(--night-2);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .panel-section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .filter-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.8rem;
+      background: var(--night-3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .filter-btn:hover { background: var(--night-4); border-color: rgba(255,255,255,0.15); }
+    .filter-btn.active { border-color: var(--red); background: rgba(255,59,92,0.08); }
+    .filter-btn .fb-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .filter-btn .fb-count { margin-left: auto; font-size: 0.75rem; color: var(--muted); font-family: 'Inter', monospace; }
+
+    .blood-filter {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+    }
+
+    .bg-btn {
+      padding: 0.4rem;
+      background: var(--night-3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: 'Inter', sans-serif;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .bg-btn:hover { border-color: var(--red); }
+    .bg-btn.active { background: rgba(255,59,92,0.12); border-color: var(--red); color: #fca5a5; }
+
+    /* MAP CANVAS */
+    .map-canvas {
+      position: relative;
+      overflow: hidden;
+      background: var(--night);
+      cursor: grab;
+    }
+
+    .map-canvas:active { cursor: grabbing; }
+
+    /* SVG Map */
+    #network-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Nodes */
+    .node {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .node:hover .node-circle { r: 18; }
+
+    .node-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      fill: rgba(255,255,255,0.7);
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    /* Pulse rings for active emergencies */
+    .pulse-ring {
+      animation: nodeRing 2s ease-out infinite;
+      transform-origin: center;
+    }
+
+    @keyframes nodeRing {
+      0% { opacity: 0.8; r: 16; }
+      100% { opacity: 0; r: 40; }
+    }
+
+    /* Connection lines */
+    .connection-line {
+      stroke-dasharray: 6 4;
+      animation: flowLine 2s linear infinite;
+    }
+
+    @keyframes flowLine {
+      to { stroke-dashoffset: -20; }
+    }
+
+    /* Right Panel */
+    .right-panel {
+      background: var(--night-2);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .stat-mini {
+      background: var(--night-3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.8rem;
+    }
+
+    .stat-mini .sm-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-mini .sm-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+
+    .node-detail-card {
+      background: var(--night-3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .ndc-header {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .ndc-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+
+    .ndc-row:last-child { border-bottom: none; }
+    .ndc-row .nr-label { color: var(--muted); }
+    .ndc-row .nr-value { font-weight: 500; }
+
+    .blood-mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+    }
+
+    .bm-item {
+      background: var(--night-4);
+      border-radius: 6px;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bm-item .bm-group { font-weight: 700; color: #fca5a5; }
+
+    .emergency-ticker {
+      background: var(--night-3);
+      border: 1px solid rgba(255,59,92,0.3);
+      border-radius: 10px;
+      padding: 0.8rem;
+    }
+
+    .ticker-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--red);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .ticker-item {
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+    }
+
+    .ticker-item:last-child { border-bottom: none; }
+    .ticker-item .ti-type { color: var(--red); font-weight: 600; }
+    .ticker-item .ti-time { color: var(--muted); font-size: 0.7rem; }
+
+    .tooltip {
+      position: absolute;
+      background: var(--night-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.78rem;
+      pointer-events: none;
+      z-index: 100;
+      max-width: 180px;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .tooltip .tt-name { font-weight: 600; margin-bottom: 0.3rem; }
+    .tooltip .tt-detail { color: var(--muted); font-size: 0.72rem; }
+
+    .legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.6rem 1rem;
+      background: var(--night-2);
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .map-controls {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .map-ctrl-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--night-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .map-ctrl-btn:hover { background: var(--night-4); }
+
+    .empty-msg { color: var(--muted); font-size: 0.82rem; text-align: center; padding: 1rem; }
+  </style>
+</head>
+<body>
+
+<nav class="map-nav">
+  <div class="brand">🩸 BloodConnect</div>
+  <div class="live-indicator"><div class="live-dot"></div> Live Network</div>
+  <div style="display:flex;align-items:center;gap:0.6rem;">
+    <a href="index_.html">Home</a>
+    <a href="blood-expiry-tracker.html">🩸 Expiry</a>
+    <a href="donor-health-passport.html">🪪 Passport</a>
+    <a href="admin-dashboard.html">Admin</a>
+    <button class="btn btn-secondary btn-sm" style="font-size:0.8rem;" onclick="forceSync()">🔄 Force Sync</button>
+  </div>
+</nav>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div class="map-layout">
+
+  <!-- LEFT PANEL: Filters -->
+  <div class="left-panel">
+    <div>
+      <div class="panel-section-title">Show On Map</div>
+      <div class="filter-btn-group">
+        <button class="filter-btn active" id="filter-hospitals" onclick="toggleFilter('hospitals', this)">
+          <div class="fb-dot" style="background:#3b82f6;"></div>
+          🏥 Hospitals
+          <span class="fb-count" id="count-hospitals">—</span>
+        </button>
+        <button class="filter-btn active" id="filter-bloodbanks" onclick="toggleFilter('bloodbanks', this)">
+          <div class="fb-dot" style="background:#10b981;"></div>
+          🏦 Blood Banks
+          <span class="fb-count" id="count-bloodbanks">—</span>
+        </button>
+        <button class="filter-btn active" id="filter-donors" onclick="toggleFilter('donors', this)">
+          <div class="fb-dot" style="background:#f59e0b;"></div>
+          🩸 Donors
+          <span class="fb-count" id="count-donors">—</span>
+        </button>
+        <button class="filter-btn active" id="filter-emergencies" onclick="toggleFilter('emergencies', this)">
+          <div class="fb-dot" style="background:#ff3b5c;"></div>
+          🚨 Emergencies
+          <span class="fb-count" id="count-emergencies">—</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Filter by Blood Group</div>
+      <div class="blood-filter" id="bg-filter-grid"></div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Connection Lines</div>
+      <div class="filter-btn-group">
+        <button class="filter-btn active" id="filter-connections" onclick="toggleConnections(this)">
+          <div class="fb-dot" style="background:rgba(255,255,255,0.3);"></div>
+          Show Flow Lines
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
+      <div class="panel-section-title">Map Info</div>
+      <div style="font-size:0.75rem;color:var(--muted);line-height:1.7;">
+        • Network map is simulated based on real registered entities<br/>
+        • Node size = blood stock volume<br/>
+        • Red pulsing rings = active emergencies<br/>
+        • Flowing lines = active blood transfers<br/>
+        • Click any node to see details
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP SVG -->
+  <div style="position:relative;display:flex;flex-direction:column;">
+    <div class="map-canvas" id="map-canvas">
+      <svg id="network-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="tooltip" id="tooltip">
+        <div class="tt-name" id="tt-name"></div>
+        <div class="tt-detail" id="tt-detail"></div>
+      </div>
+      <div class="map-controls">
+        <button class="map-ctrl-btn" onclick="resetView()" title="Reset view">⌖</button>
+        <button class="map-ctrl-btn" onclick="toggleAnimation()" title="Toggle animation" id="anim-btn">⏸</button>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div> Hospital</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div> Blood Bank</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div> Available Donor</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff3b5c;"></div> Emergency</div>
+      <div class="legend-item" style="font-style:italic;">Node size = blood stock | Click node for details</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Stats + Details -->
+  <div class="right-panel">
+
+    <!-- Mini stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+      <div class="stat-mini">
+        <div class="sm-value" id="stat-total-units" style="color:#3b82f6;">—</div>
+        <div class="sm-label">Total Units</div>
+      </div>
+      <div class="stat-mini">
+        <div class="sm-value" id="stat-active-emg" style="color:#ff3b5c;">—</div>
+        <div class="sm-label">Emergencies</div>
+      </div>
+      <div class="stat-mini">
+        <div class="sm-value" id="stat-nodes" style="color:#10b981;">—</div>
+        <div class="sm-label">Active Nodes</div>
+      </div>
+      <div class="stat-mini">
+        <div class="sm-value" id="stat-critical" style="color:#f59e0b;">—</div>
+        <div class="sm-label">Critical Stock</div>
+      </div>
+    </div>
+
+    <!-- Selected Node Detail -->
+    <div class="node-detail-card" id="node-detail">
+      <div style="color:var(--muted);font-size:0.82rem;text-align:center;padding:0.5rem;">
+        👆 Click a node on the map to see details
+      </div>
+    </div>
+
+    <!-- Emergency Ticker -->
+    <div class="emergency-ticker">
+      <div class="ticker-title">🚨 Emergency Feed</div>
+      <div id="emergency-feed">
+        <div class="empty-msg">No active emergencies</div>
+      </div>
+    </div>
+
+    <!-- Blood Availability -->
+    <div class="node-detail-card">
+      <div class="ndc-header">📦 Network Stock Overview</div>
+      <div id="network-stock-grid" class="blood-mini-grid"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="db.js"></script>
+<script>
+  DB.init();
+
+  const BLOOD_GROUPS = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+  const colors = {
+    hospital: '#3b82f6',
+    bloodbank: '#10b981',
+    donor: '#f59e0b',
+    emergency: '#ff3b5c'
+  };
+
+  let activeFilters = { hospitals: true, bloodbanks: true, donors: true, emergencies: true };
+  let activeBG = new Set(BLOOD_GROUPS);
+  let showConnections = true;
+  let animating = true;
+  let selectedNode = null;
+  let lastNetworkAlertLevel = null;
+
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 50);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  function forceSync() {
+    drawMap();
+    showToast('🔄 Map forced sync complete', 'success');
+  }
+
+
+  // Blood group filter UI
+  document.getElementById('bg-filter-grid').innerHTML = BLOOD_GROUPS.map(bg => `
+    <button class="bg-btn active" id="bgf-${bg.replace('+','P').replace('-','N')}" onclick="toggleBG('${bg}', this)">${bg}</button>
+  `).join('');
+
+  function toggleFilter(type, btn) {
+    activeFilters[type] = !activeFilters[type];
+    btn.classList.toggle('active', activeFilters[type]);
+    drawMap();
+  }
+
+  function toggleBG(bg, btn) {
+    if (activeBG.has(bg)) activeBG.delete(bg);
+    else activeBG.add(bg);
+    btn.classList.toggle('active', activeBG.has(bg));
+    drawMap();
+  }
+
+  function toggleConnections(btn) {
+    showConnections = !showConnections;
+    btn.classList.toggle('active', showConnections);
+    drawMap();
+  }
+
+  function toggleAnimation() {
+    animating = !animating;
+    document.getElementById('anim-btn').textContent = animating ? '⏸' : '▶';
+    document.querySelectorAll('.connection-line').forEach(l => {
+      l.style.animationPlayState = animating ? 'running' : 'paused';
+    });
+    document.querySelectorAll('.pulse-ring').forEach(r => {
+      r.style.animationPlayState = animating ? 'running' : 'paused';
+    });
+  }
+
+  function resetView() { drawMap(); }
+
+  // Generate stable positions using seed
+  function seededRandom(seed) {
+    const x = Math.sin(seed + 1) * 10000;
+    return x - Math.floor(x);
+  }
+
+  function getNodePos(id, index, total, W, H) {
+    // Spread nodes across the canvas using golden ratio spiraling
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const angle = index * (2 * Math.PI / phi);
+    const r = Math.sqrt(index / total) * Math.min(W, H) * 0.38;
+    const cx = W / 2 + r * Math.cos(angle) * (0.8 + seededRandom(index) * 0.4);
+    const cy = H / 2 + r * Math.sin(angle) * (0.8 + seededRandom(index + 100) * 0.4);
+    return { x: Math.max(60, Math.min(W-60, cx)), y: Math.max(60, Math.min(H-60, cy)) };
+  }
+
+  function drawMap() {
+    const svg = document.getElementById('network-svg');
+    const canvas = document.getElementById('map-canvas');
+    const W = canvas.clientWidth || 700;
+    const H = canvas.clientHeight || 500;
+
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = '';
+
+    // Load data
+    const hospitals = DB.getUsersByRole('hospital');
+    const bloodbanks = DB.getUsersByRole('bloodbank');
+    const donors = DB.getUsersByRole('donor').filter(d => d.available);
+    const emergencies = DB.getEmergencies().filter(e => e.status === 'active');
+    const stock = DB.getStock();
+
+    const expiryStatusMap = {};
+    DB.getStockExpiryReports().forEach(item => {
+      if (!expiryStatusMap[item.ownerId]) expiryStatusMap[item.ownerId] = {critical:0, warning:0, safe:0, expired:0, unknown:0};
+      if (expiryStatusMap[item.ownerId][item.status] !== undefined) expiryStatusMap[item.ownerId][item.status] += item.units;
+    });
+
+    // Update counts
+    document.getElementById('count-hospitals').textContent = hospitals.length;
+    document.getElementById('count-bloodbanks').textContent = bloodbanks.length;
+    document.getElementById('count-donors').textContent = donors.length;
+    document.getElementById('count-emergencies').textContent = emergencies.length;
+
+    const totalCritical = Object.values(expiryStatusMap).reduce((sum, data) => sum + (data.critical || 0), 0);
+    const totalWarning = Object.values(expiryStatusMap).reduce((sum, data) => sum + (data.warning || 0), 0);
+    const alertLevel = totalCritical > 0 ? 'error' : totalWarning > 0 ? 'warning' : 'success';
+    if (alertLevel !== lastNetworkAlertLevel) {
+      lastNetworkAlertLevel = alertLevel;
+      if (alertLevel === 'error') showToast(`🚨 ${totalCritical} critical expiring units in network`, 'error');
+      else if (alertLevel === 'warning') showToast(`⚠️ ${totalWarning} expiring units in network`, 'warning');
+      else showToast('✅ Network stock stable', 'success');
+    }
+
+    // Build node list
+    let nodes = [];
+    let idx = 0;
+
+    if (activeFilters.hospitals) {
+      hospitals.forEach(h => {
+        const ownerStock = stock.filter(s => s.ownerId === h.id);
+        const totalUnits = ownerStock.reduce((s,x)=>s+x.units,0);
+        const expiryInfo = expiryStatusMap[h.id] || {critical:0,warning:0,safe:0,expired:0,unknown:0};
+        const expiryStatus = expiryInfo.critical > 0 ? 'critical' : expiryInfo.warning > 0 ? 'warning' : expiryInfo.expired > 0 ? 'expired' : expiryInfo.safe > 0 ? 'safe' : 'unknown';
+        nodes.push({ type:'hospital', data: h, units: totalUnits, stock: ownerStock, id: h.id, idx: idx++, expiryStatus });
+      });
+    }
+
+    if (activeFilters.bloodbanks) {
+      bloodbanks.forEach(b => {
+        const ownerStock = stock.filter(s => s.ownerId === b.id);
+        const totalUnits = ownerStock.reduce((s,x)=>s+x.units,0);
+        const expiryInfo = expiryStatusMap[b.id] || {critical:0,warning:0,safe:0,expired:0,unknown:0};
+        const expiryStatus = expiryInfo.critical > 0 ? 'critical' : expiryInfo.warning > 0 ? 'warning' : expiryInfo.expired > 0 ? 'expired' : expiryInfo.safe > 0 ? 'safe' : 'unknown';
+        nodes.push({ type:'bloodbank', data: b, units: totalUnits, stock: ownerStock, id: b.id, idx: idx++, expiryStatus });
+      });
+    }
+
+    if (activeFilters.donors) {
+      donors.forEach(d => {
+        if (!activeBG.has(d.bloodGroup)) return;
+        nodes.push({ type:'donor', data: d, units: 1, stock: [], id: d.id, idx: idx++ });
+      });
+    }
+
+    if (activeFilters.emergencies) {
+      emergencies.forEach(e => {
+        nodes.push({ type:'emergency', data: e, units: e.unitsNeeded || 1, stock: [], id: e.id, idx: idx++ });
+      });
+    }
+
+    const total = Math.max(nodes.length, 1);
+    nodes = nodes.map((n, i) => ({
+      ...n,
+      pos: getNodePos(n.id, i, total, W, H)
+    }));
+
+    // Stats
+    const totalUnits = stock.reduce((s,x)=>s+x.units,0);
+    const criticalGroups = BLOOD_GROUPS.filter(bg => {
+      const units = stock.filter(s=>s.bloodGroup===bg).reduce((s,x)=>s+x.units,0);
+      return units <= 5;
+    }).length;
+
+    document.getElementById('stat-total-units').textContent = totalUnits;
+    document.getElementById('stat-active-emg').textContent = emergencies.length;
+    document.getElementById('stat-nodes').textContent = nodes.length;
+    document.getElementById('stat-critical').textContent = criticalGroups;
+
+    // Network stock overview
+    document.getElementById('network-stock-grid').innerHTML = BLOOD_GROUPS.map(bg => {
+      const units = stock.filter(s=>s.bloodGroup===bg).reduce((s,x)=>s+x.units,0);
+      const cls = units === 0 ? '#ff3b5c' : units <= 5 ? '#f59e0b' : '#10b981';
+      return `<div class="bm-item"><span class="bm-group">${bg}</span><span style="color:${cls};font-size:0.8rem;font-weight:600;">${units}u</span></div>`;
+    }).join('');
+
+    // Emergency feed
+    const feed = document.getElementById('emergency-feed');
+    if (emergencies.length === 0) {
+      feed.innerHTML = '<div class="empty-msg">No active emergencies</div>';
+    } else {
+      feed.innerHTML = emergencies.slice(0,5).map(e => `
+        <div class="ticker-item">
+          <div><span class="ti-type">${e.bloodGroup}</span> needed — ${e.unitsNeeded} unit(s)</div>
+          <div style="color:#94a3b8;font-size:0.75rem;">${e.patientName || 'Unknown'}</div>
+          <div class="ti-time">${new Date(e.createdAt).toLocaleTimeString()}</div>
+        </div>`).join('');
+    }
+
+    // Defs (gradients, glow filters)
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `
+      <filter id="glow-blue"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="glow-red"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="glow-green"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    `;
+    svg.appendChild(defs);
+
+    // Background grid
+    const grid = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    grid.setAttribute('opacity', '0.06');
+    for (let x = 0; x < W; x += 60) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x); line.setAttribute('y1', 0);
+      line.setAttribute('x2', x); line.setAttribute('y2', H);
+      line.setAttribute('stroke', 'white'); line.setAttribute('stroke-width', '0.5');
+      grid.appendChild(line);
+    }
+    for (let y = 0; y < H; y += 60) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', 0); line.setAttribute('y1', y);
+      line.setAttribute('x2', W); line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'white'); line.setAttribute('stroke-width', '0.5');
+      grid.appendChild(line);
+    }
+    svg.appendChild(grid);
+
+    // Draw connections (hospitals <-> bloodbanks)
+    if (showConnections) {
+      const hospitalNodes = nodes.filter(n => n.type === 'hospital');
+      const bankNodes = nodes.filter(n => n.type === 'bloodbank');
+      const emergNodes = nodes.filter(n => n.type === 'emergency');
+
+      bankNodes.forEach(bank => {
+        hospitalNodes.forEach(hosp => {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', bank.pos.x); line.setAttribute('y1', bank.pos.y);
+          line.setAttribute('x2', hosp.pos.x); line.setAttribute('y2', hosp.pos.y);
+          line.setAttribute('stroke', 'rgba(59,130,246,0.2)');
+          line.setAttribute('stroke-width', '1.5');
+          line.classList.add('connection-line');
+          svg.appendChild(line);
+        });
+      });
+
+      emergNodes.forEach(emg => {
+        const nearest = [...hospitalNodes, ...bankNodes].sort(() => Math.random() - 0.5).slice(0, 2);
+        nearest.forEach(n => {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', emg.pos.x); line.setAttribute('y1', emg.pos.y);
+          line.setAttribute('x2', n.pos.x); line.setAttribute('y2', n.pos.y);
+          line.setAttribute('stroke', 'rgba(255,59,92,0.3)');
+          line.setAttribute('stroke-width', '1.5');
+          line.classList.add('connection-line');
+          svg.appendChild(line);
+        });
+      });
+    }
+
+    // Draw nodes
+    nodes.forEach(node => {
+      const { type, pos, units, data } = node;
+      const color = colors[type];
+      const r = type === 'hospital' || type === 'bloodbank'
+        ? Math.max(12, Math.min(24, 10 + units * 0.3))
+        : type === 'emergency' ? 16 : 10;
+      const isEmg = type === 'emergency';
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.classList.add('node');
+      g.setAttribute('data-id', node.id);
+      g.setAttribute('data-type', type);
+      g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
+
+      // Pulse ring for emergencies
+      if (isEmg) {
+        for (let i = 0; i < 3; i++) {
+          const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          ring.setAttribute('r', 16);
+          ring.setAttribute('cx', 0);
+          ring.setAttribute('cy', 0);
+          ring.setAttribute('fill', 'none');
+          ring.setAttribute('stroke', color);
+          ring.setAttribute('stroke-width', '2');
+          ring.setAttribute('opacity', '0');
+          ring.classList.add('pulse-ring');
+          ring.style.animationDelay = `${i * 0.6}s`;
+          ring.style.animationPlayState = animating ? 'running' : 'paused';
+          g.appendChild(ring);
+        }
+      }
+
+      // Outer glow
+      const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      glow.setAttribute('r', r + 6);
+      glow.setAttribute('fill', color);
+      glow.setAttribute('opacity', '0.15');
+      g.appendChild(glow);
+
+      // Main circle
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.classList.add('node-circle');
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', color);
+      circle.setAttribute('filter', `url(#glow-${type === 'hospital' ? 'blue' : type === 'emergency' ? 'red' : 'green'})`);
+      circle.setAttribute('opacity', '0.9');
+      if (node.expiryStatus) {
+        if (node.expiryStatus === 'critical') {
+          circle.setAttribute('stroke', '#ff3b5c');
+          circle.setAttribute('stroke-width', '3');
+        } else if (node.expiryStatus === 'warning') {
+          circle.setAttribute('stroke', '#f59e0b');
+          circle.setAttribute('stroke-width', '2');
+        } else if (node.expiryStatus === 'expired') {
+          circle.setAttribute('stroke', '#6b7280');
+          circle.setAttribute('stroke-width', '3');
+          circle.setAttribute('stroke-dasharray', '5 3');
+        }
+      }
+      g.appendChild(circle);
+
+      // Icon
+      const emoji = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      emoji.setAttribute('text-anchor', 'middle');
+      emoji.setAttribute('dominant-baseline', 'central');
+      emoji.setAttribute('font-size', r * 0.9);
+      emoji.textContent = type === 'hospital' ? '🏥' : type === 'bloodbank' ? '🏦' : type === 'emergency' ? '🚨' : '🩸';
+      emoji.style.pointerEvents = 'none';
+      g.appendChild(emoji);
+
+      // Label
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.classList.add('node-label');
+      label.setAttribute('y', r + 12);
+      label.textContent = (data.name || data.patientName || 'Unknown').slice(0, 16);
+      g.appendChild(label);
+
+      // Click handler
+      g.addEventListener('click', () => selectNode(node));
+      g.addEventListener('mouseenter', (e) => showTooltip(e, node));
+      g.addEventListener('mouseleave', hideTooltip);
+
+      svg.appendChild(g);
+    });
+
+    // Animate lines
+    if (!animating) {
+      document.querySelectorAll('.connection-line').forEach(l => {
+        l.style.animationPlayState = 'paused';
+      });
+    }
+  }
+
+  function showTooltip(e, node) {
+    const tt = document.getElementById('tooltip');
+    const canvas = document.getElementById('map-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const svgEl = document.getElementById('network-svg');
+    const svgRect = svgEl.getBoundingClientRect();
+
+    let name, detail;
+    if (node.type === 'hospital' || node.type === 'bloodbank') {
+      name = node.data.name;
+      detail = `${node.units} blood units`;
+    } else if (node.type === 'donor') {
+      name = node.data.name;
+      detail = `${node.data.bloodGroup} • Available`;
+    } else {
+      name = '🚨 Emergency';
+      detail = `${node.data.bloodGroup} • ${node.data.unitsNeeded} units needed`;
+    }
+
+    document.getElementById('tt-name').textContent = name;
+    document.getElementById('tt-detail').textContent = detail;
+
+    const x = e.clientX - svgRect.left + 10;
+    const y = e.clientY - svgRect.top + 10;
+    tt.style.left = `${x}px`;
+    tt.style.top = `${y}px`;
+    tt.style.display = 'block';
+  }
+
+  function hideTooltip() {
+    document.getElementById('tooltip').style.display = 'none';
+  }
+
+  function openGoogleMaps(query) {
+    if (!query) return;
+    const encoded = encodeURIComponent(query);
+    window.open('https://www.google.com/maps/search/?api=1&query=' + encoded, '_blank');
+  }
+
+  function selectNode(node) {
+    selectedNode = node;
+    const det = document.getElementById('node-detail');
+
+    if (node.type === 'hospital' || node.type === 'bloodbank') {
+      const d = node.data;
+      det.innerHTML = `
+        <div class="ndc-header">${node.type === 'hospital' ? '🏥' : '🏦'} ${d.name}</div>
+        <div class="ndc-row"><span class="nr-label">Type</span><span class="nr-value">${node.type === 'hospital' ? 'Hospital' : 'Blood Bank'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Address</span><span class="nr-value" style="font-size:0.75rem;">${d.address || '—'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Phone</span><span class="nr-value">${d.phone || '—'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Total Units</span><span class="nr-value" style="color:#10b981;">${node.units}</span></div>
+        ${node.stock.length > 0 ? `
+          <div style="margin-top:0.6rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Blood Stock</div>
+          <div class="blood-mini-grid">
+            ${node.stock.filter(s=>s.units>0).map(s => {
+              const cl = s.units <= 2 ? '#ff3b5c' : s.units <= 5 ? '#f59e0b' : '#10b981';
+              return `<div class="bm-item"><span class="bm-group">${s.bloodGroup}</span><span style="color:${cl};font-size:0.8rem;font-weight:600;">${s.units}u</span></div>`;
+            }).join('')}
+          </div>
+        ` : ''}
+        <div class="ndc-row"><button class="btn btn-secondary btn-sm map-btn">🗺️ Open in Google Maps</button></div>
+      `;
+      const mapTarget = d.address || d.name;
+      det.querySelector('.map-btn').addEventListener('click', () => openGoogleMaps(mapTarget));
+    } else if (node.type === 'donor') {
+      const d = node.data;
+      const eligible = !d.lastDonated || (Date.now() - new Date(d.lastDonated)) >= 90*86400000;
+      det.innerHTML = `
+        <div class="ndc-header">🩸 ${d.name}</div>
+        <div class="ndc-row"><span class="nr-label">Blood Group</span><span class="nr-value" style="color:#fca5a5;">${d.bloodGroup}</span></div>
+        <div class="ndc-row"><span class="nr-label">Phone</span><span class="nr-value">${d.phone || '—'}</span></div>
+        <div class="ndc-row"><span class="nr-label">City</span><span class="nr-value">${d.address || '—'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Status</span><span class="nr-value" style="color:${eligible ? '#10b981' : '#f59e0b'};">${eligible ? '✅ Eligible' : '⏳ Cooldown'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Last Donated</span><span class="nr-value">${d.lastDonated ? new Date(d.lastDonated).toLocaleDateString() : 'Never'}</span></div>
+        <div class="ndc-row"><button class="btn btn-secondary btn-sm map-btn">🗺️ Open in Google Maps</button></div>
+      `;
+      const mapTarget = d.address || d.name;
+      det.querySelector('.map-btn').addEventListener('click', () => openGoogleMaps(mapTarget));
+    } else {
+      const e = node.data;
+      det.innerHTML = `
+        <div class="ndc-header" style="color:#ff3b5c;">🚨 Emergency Request</div>
+        <div class="ndc-row"><span class="nr-label">Patient</span><span class="nr-value">${e.patientName || '—'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Blood Group</span><span class="nr-value" style="color:#fca5a5;">${e.bloodGroup}</span></div>
+        <div class="ndc-row"><span class="nr-label">Units Needed</span><span class="nr-value">${e.unitsNeeded}</span></div>
+        <div class="ndc-row"><span class="nr-label">Contact</span><span class="nr-value">${e.patientPhone || '—'}</span></div>
+        <div class="ndc-row"><span class="nr-label">Raised</span><span class="nr-value">${new Date(e.createdAt).toLocaleTimeString()}</span></div>
+      `;
+    }
+  }
+
+  // Auto-refresh every 10 seconds
+  setInterval(() => {
+    drawMap();
+  }, 10000);
+
+  // Initial draw + resize
+  window.addEventListener('resize', drawMap);
+  drawMap();
+</script>
+</body>
+</html>

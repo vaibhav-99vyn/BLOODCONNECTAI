@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donor Registration — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="auth-page">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <h1>🩸 BloodConnect</h1>
+        <p>Donor Registration</p>
+      </div>
+      <h2>Create Account</h2>
+
+      <div id="msg"></div>
+
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="name" placeholder="Rahul Sharma" required />
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="donor@email.com" required />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Min 6 characters" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Blood Group</label>
+          <select id="bloodGroup" required>
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option>
+            <option>B+</option><option>B-</option>
+            <option>O+</option><option>O-</option>
+            <option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" placeholder="9876543210" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Address / City</label>
+        <input type="text" id="address" placeholder="Badlapur, Maharashtra" required />
+      </div>
+
+      <!-- Location capture -->
+      <div class="form-group">
+        <label>Your Location (for nearby matching)</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="locationDisplay" placeholder="Click button to capture →" readonly style="flex:1;background:var(--gray-100);" />
+          <button class="btn btn-secondary" onclick="captureLocation()">📍 Get</button>
+        </div>
+        <input type="hidden" id="lat" />
+        <input type="hidden" id="lng" />
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" onclick="register()">Register as Donor</button>
+
+      <div class="auth-switch">
+        Already have an account? <a href="donor-login.html">Login here</a>
+      </div>
+      <div class="auth-switch" style="margin-top:8px;">
+        <a href="index .html" style="color:var(--gray-400);">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="auth.js"></script>
+  <script src="emergency.js"></script>
+  <script>
+    DB.init();
+
+    async function captureLocation() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = '...';
+      try {
+        const loc = await Emergency.getCurrentLocation();
+        document.getElementById('lat').value = loc.lat;
+        document.getElementById('lng').value = loc.lng;
+        document.getElementById('locationDisplay').value = `Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}`;
+        btn.textContent = '✅';
+      } catch (e) {
+        // Use default Badlapur coords if denied
+        document.getElementById('lat').value = 19.1643;
+        document.getElementById('lng').value = 73.2616;
+        document.getElementById('locationDisplay').value = 'Default (Badlapur, MH)';
+        btn.textContent = '📍';
+        alert('Location access denied. Using default location.');
+      }
+      btn.disabled = false;
+    }
+
+    function register() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const bloodGroup = document.getElementById('bloodGroup').value;
+      const phone = document.getElementById('phone').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const lat = parseFloat(document.getElementById('lat').value) || 19.1643;
+      const lng = parseFloat(document.getElementById('lng').value) || 73.2616;
+
+      if (!name || !email || !password || !bloodGroup || !phone || !address) {
+        showMsg('error', 'Please fill in all fields.');
+        return;
+      }
+      if (password.length < 6) {
+        showMsg('error', 'Password must be at least 6 characters.');
+        return;
+      }
+
+      const result = Auth.register({ role: 'donor', name, email, password, bloodGroup, phone, address, lat, lng, available: true, lastDonated: null });
+
+      if (!result.success) {
+        showMsg('error', result.message);
+        return;
+      }
+
+      showMsg('success', 'Registration successful! Redirecting to login...');
+      setTimeout(() => window.location.href = 'donor-login.html', 1500);
+    }
+
+    function showMsg(type, text) {
+      const el = document.getElementById('msg');
+      el.innerHTML = `<div class="alert alert-${type === 'error' ? 'error' : 'success'}">${text}</div>`;
+    }
+  </script>
+</body>
+</html>

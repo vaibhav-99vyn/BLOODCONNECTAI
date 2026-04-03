@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Dashboard — BloodConnect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">🩸 <span>Blood</span>Connect</div>
+    <div class="nav-links">
+      <a href="index .html">Home</a>
+      <a href="live-network-map.html">🌐 Live Network</a>
+      <a href="donor-health-passport.html">🧾 Donor Passport</a>
+      <a href="blood-expiry-tracker.html">⏳ Expiry Tracker</a>
+      <button class="logout-btn" onclick="Auth.logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="page" id="app">
+    <div style="text-align:center;padding:3rem;"><div class="spinner"></div></div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="auth.js"></script>
+  <script src="emergency.js"></script>
+  <script>
+    DB.init();
+    const user = Auth.requireAuth('patient');
+    if (!user) throw new Error();
+
+    let patientLat = null, patientLng = null;
+
+    function renderDashboard() {
+      const myRequests = DB.getRequestsByPatient(user.id);
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="dash-header">
+          <div>
+            <h1>Patient Dashboard</h1>
+            <p>Welcome, ${user.name}. Request blood or track your requests below.</p>
+          </div>
+          <div class="user-pill">🩸 ${user.bloodGroup || 'Unknown'}</div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('request', this)">🚨 Request Blood</button>
+          <button class="tab-btn" onclick="switchTab('myreqs', this)">📋 My Requests</button>
+          <button class="tab-btn" onclick="switchTab('nearby', this)">📍 Nearby Sources</button>
+        </div>
+
+        <!-- REQUEST BLOOD TAB -->
+        <div class="tab-panel active" id="tab-request">
+          <div class="card">
+            <div class="card-title">🚨 Request Blood / Emergency Alert</div>
+            <div class="alert alert-info">ℹ️ For emergency requests, the system will find the nearest blood source and send automatic alerts via email and call simulation.</div>
+
+            <div class="form-group">
+              <label>Blood Group Required</label>
+              <select id="req_bloodGroup">
+                <option value="">Select Blood Group</option>
+                <option ${user.bloodGroup === 'A+' ? 'selected' : ''}>A+</option>
+                <option ${user.bloodGroup === 'A-' ? 'selected' : ''}>A-</option>
+                <option ${user.bloodGroup === 'B+' ? 'selected' : ''}>B+</option>
+                <option ${user.bloodGroup === 'B-' ? 'selected' : ''}>B-</option>
+                <option ${user.bloodGroup === 'O+' ? 'selected' : ''}>O+</option>
+                <option ${user.bloodGroup === 'O-' ? 'selected' : ''}>O-</option>
+                <option ${user.bloodGroup === 'AB+' ? 'selected' : ''}>AB+</option>
+                <option ${user.bloodGroup === 'AB-' ? 'selected' : ''}>AB-</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Units Required</label>
+                <select id="req_units">
+                  <option value="1">1 Unit</option>
+                  <option value="2">2 Units</option>
+                  <option value="3">3 Units</option>
+                  <option value="4">4 Units</option>
+                  <option value="5">5 Units</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Urgency Level</label>
+                <select id="req_urgency">
+                  <option value="emergency">🚨 Emergency</option>
+                  <option value="urgent">⚠️ Urgent</option>
+                  <option value="normal">🕐 Normal</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Hospital / Location</label>
+              <input type="text" id="req_hospital" placeholder="Name of hospital where you are" />
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" id="req_notes" placeholder="Doctor's name, ward, any extra info" />
+            </div>
+
+            <!-- Location -->
+            <div class="form-group">
+              <label>Your Current Location (Required for emergency matching)</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" id="locationDisplay" placeholder="Click 📍 to capture your location" readonly style="flex:1;background:var(--gray-100);" />
+                <button class="btn btn-secondary" onclick="captureLocation()">📍 Get Location</button>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+              <button class="btn btn-danger btn-lg" onclick="sendEmergencyRequest()">🚨 Send Emergency Alert</button>
+              <button class="btn btn-warning" onclick="sendNormalRequest()">📋 Normal Request</button>
+            </div>
+            <div id="req-result" style="margin-top:1.5rem;"></div>
+          </div>
+        </div>
+
+        <!-- MY REQUESTS TAB -->
+        <div class="tab-panel" id="tab-myreqs">
+          <div class="card">
+            <div class="card-title">📋 My Blood Requests</div>
+            ${myRequests.length === 0 ? `<div class="empty-state"><div class="empty-icon">📋</div><p>No requests yet.</p></div>` : `
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Blood Group</th><th>Units</th><th>Urgency</th><th>Status</th><th>Notes</th></tr></thead>
+                <tbody>
+                  ${[...myRequests].reverse().map(r => `<tr>
+                    <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td><span class="badge badge-red">${r.bloodGroup}</span></td>
+                    <td>${r.units}</td>
+                    <td><span class="badge badge-${r.urgency === 'emergency' ? 'red' : r.urgency === 'urgent' ? 'yellow' : 'blue'}">${r.urgency}</span></td>
+                    <td><span class="badge badge-${r.status === 'fulfilled' ? 'green' : r.status === 'pending' ? 'yellow' : 'gray'}">${r.status}</span></td>
+                    <td>${r.notes || '—'}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`}
+          </div>
+        </div>
+
+        <!-- NEARBY TAB -->
+        <div class="tab-panel" id="tab-nearby">
+          <div class="card">
+            <div class="card-title">📍 Find Nearby Blood Sources</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Blood Group</label>
+                <select id="nearby_bg">
+                  <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                  <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Search Radius (km)</label>
+                <select id="nearby_radius">
+                  <option value="10">10 km</option>
+                  <option value="25">25 km</option>
+                  <option value="50" selected>50 km</option>
+                  <option value="100">100 km</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="findNearby()">🔍 Search</button>
+            <div id="nearby-results" style="margin-top:1.5rem;"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function captureLocation() {
+      const btn = event.target;
+      btn.disabled = true; btn.textContent = 'Getting...';
+      try {
+        const loc = await Emergency.getCurrentLocation();
+        patientLat = loc.lat; patientLng = loc.lng;
+        document.getElementById('locationDisplay').value = `Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}`;
+        btn.textContent = '✅ Got';
+      } catch (e) {
+        patientLat = 19.1643; patientLng = 73.2616;
+        document.getElementById('locationDisplay').value = 'Default (Badlapur, MH)';
+        btn.textContent = '📍 Get Location';
+        alert('Location denied. Using default location.');
+      }
+      btn.disabled = false;
+    }
+
+    async function sendEmergencyRequest() {
+      const bloodGroup = document.getElementById('req_bloodGroup').value;
+      const units = parseInt(document.getElementById('req_units').value);
+      const notes = document.getElementById('req_notes').value;
+      const hospital = document.getElementById('req_hospital').value;
+
+      if (!bloodGroup) { alert('Please select a blood group.'); return; }
+
+      // Use captured location or default
+      const lat = patientLat || 19.1643;
+      const lng = patientLng || 73.2616;
+
+      const resultDiv = document.getElementById('req-result');
+      resultDiv.innerHTML = `<div class="alert alert-info"><div class="spinner"></div> &nbsp; Scanning nearby blood sources...</div>`;
+
+      // Small delay for UX
+      await new Promise(r => setTimeout(r, 1000));
+
+      const sources = Emergency.findNearbySources(lat, lng, bloodGroup, 100);
+
+      if (sources.length === 0) {
+        resultDiv.innerHTML = `
+          <div class="alert alert-error">❌ No blood sources with ${bloodGroup} found within 100km. Expanding search...</div>
+          <div class="alert alert-warning">⚠️ Please contact your nearest hospital directly or call emergency services.</div>
+        `;
+        // Still log request
+        DB.addRequest({ patientId: user.id, patientName: user.name, bloodGroup, units, urgency: 'emergency', patientLat: lat, patientLng: lng, notes, hospital });
+        return;
+      }
+
+      // Raise emergency
+      const emergency = Emergency.raiseEmergencyRequest(user, bloodGroup, units, sources.slice(0, 3), lat, lng);
+
+      let sourcesHTML = sources.slice(0, 5).map(s => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-200);">
+          <div>
+            <strong>${s.name}</strong> <span class="badge badge-${s.type === 'Donor' ? 'blue' : s.type === 'Hospital' ? 'red' : 'green'}">${s.type}</span><br/>
+            <small style="color:var(--gray-400);">${s.address || ''} &nbsp; 📞 ${s.phone || 'N/A'}</small>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700;color:var(--red);">${s.units} units</div>
+            <div style="font-size:0.8rem;color:var(--gray-400);">${s.distanceKm} km away</div>
+          </div>
+        </div>`).join('');
+
+      resultDiv.innerHTML = `
+        <div class="emergency-card">
+          <div class="emg-header"><div class="pulse-dot"></div><strong>🚨 EMERGENCY ALERTS SENT</strong></div>
+          <p style="font-size:0.9rem;color:var(--red-dark);margin-bottom:1rem;">
+            Email & call notifications sent to ${Math.min(sources.length, 3)} nearest source(s) for <strong>${units} unit(s) of ${bloodGroup}</strong>.
+          </p>
+          <strong>Nearest Sources Alerted:</strong>
+          ${sourcesHTML}
+          <div class="alert alert-success" style="margin-top:1rem;">✅ Emergency ID: <code>${emergency.id}</code> — Keep this for tracking.</div>
+        </div>
+      `;
+    }
+
+    function sendNormalRequest() {
+      const bloodGroup = document.getElementById('req_bloodGroup').value;
+      const units = parseInt(document.getElementById('req_units').value);
+      const urgency = document.getElementById('req_urgency').value;
+      const notes = document.getElementById('req_notes').value;
+      const hospital = document.getElementById('req_hospital').value;
+
+      if (!bloodGroup) { alert('Please select blood group.'); return; }
+
+      DB.addRequest({ patientId: user.id, patientName: user.name, bloodGroup, units, urgency, notes, hospital, patientLat, patientLng });
+      document.getElementById('req-result').innerHTML = `<div class="alert alert-success">✅ Request submitted. Admin and nearby facilities have been notified.</div>`;
+    }
+
+    function findNearby() {
+      const bg = document.getElementById('nearby_bg').value;
+      const radius = parseInt(document.getElementById('nearby_radius').value);
+      const lat = patientLat || 19.1643;
+      const lng = patientLng || 73.2616;
+      const sources = Emergency.findNearbySources(lat, lng, bg, radius);
+      const div = document.getElementById('nearby-results');
+
+      if (sources.length === 0) {
+        div.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No sources found within ${radius}km for ${bg}.</p></div>`;
+        return;
+      }
+
+      div.innerHTML = `
+        <p style="margin-bottom:1rem;font-size:0.9rem;color:var(--gray-400);">Found <strong>${sources.length}</strong> source(s) within ${radius}km for <strong>${bg}</strong>:</p>
+        ${sources.map(s => `
+          <div class="card" style="margin-bottom:0.75rem;padding:1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+              <div>
+                <strong>${s.name}</strong> <span class="badge badge-${s.type === 'Donor' ? 'blue' : s.type === 'Hospital' ? 'red' : 'green'}">${s.type}</span>
+                <div style="font-size:0.85rem;color:var(--gray-400);margin-top:4px;">📍 ${s.distanceKm} km away &nbsp; 📞 ${s.phone || 'N/A'}</div>
+                <div style="font-size:0.82rem;color:var(--gray-400);">${s.address || ''}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="stat-value" style="font-size:1.6rem;">${s.units}</div>
+                <div style="font-size:0.75rem;color:var(--gray-400);">units available</div>
+              </div>
+            </div>
+          </div>`).join('')}
+      `;
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    renderDashboard();
+  </script>
+</body>
+</html>

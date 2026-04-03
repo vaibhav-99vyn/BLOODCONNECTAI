@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BloodConnect — Blood Management & Emergency System</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">🩸 <span>Blood</span>Connect</div>
+    <div class="nav-links">
+      <a href="index .html">Home</a>
+      <a href="ai-demo.html">🤖 AI Demo</a>
+      <a href="admin-dashboard.html">Admin</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Every Drop <span>Counts</span></h1>
+    <p>A real-time Blood Management & Emergency Request System connecting donors, hospitals, blood banks, and patients — saving lives, faster.</p>
+    <div class="hero-buttons">
+      <a href="donor-register.html" class="btn btn-primary btn-lg">🩸 Register as Donor</a>
+      <a href="patient-login.html" class="btn btn-secondary btn-lg" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.3);">🚨 Patient Emergency</a>
+    </div>
+  </section>
+
+  <!-- ROLE CARDS -->
+  <div class="role-grid">
+
+    <div class="role-card">
+      <div class="role-icon">🩸</div>
+      <h3>Donor</h3>
+      <p>Register to donate blood and save lives in your community.</p>
+      <div class="role-links">
+        <a href="donor-register.html">Register</a>
+        <a href="donor-login.html">Login</a>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-icon">🏥</div>
+      <h3>Patient</h3>
+      <p>Request blood in emergency situations and track availability nearby.</p>
+      <div class="role-links">
+        <a href="patient-login.html">Login</a>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-icon">🏨</div>
+      <h3>Hospital</h3>
+      <p>Manage blood stock, receive donations and fulfill patient requests.</p>
+      <div class="role-links">
+        <a href="hospital-login.html">Login</a>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-icon">🏦</div>
+      <h3>Blood Bank</h3>
+      <p>Maintain blood inventory and respond to emergency alerts instantly.</p>
+      <div class="role-links">
+        <a href="bloodbank-login.html">Login</a>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-icon">🛡️</div>
+      <h3>Admin</h3>
+      <p>Oversee the entire system — donors, patients, stock, requests & emergencies.</p>
+      <div class="role-links">
+        <a href="admin-dashboard.html">Dashboard</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STATS SECTION -->
+  <section style="background:var(--dark);padding:3rem 1.5rem;text-align:center;color:var(--white);">
+    <h2 style="font-size:2.5rem;color:var(--red-light);margin-bottom:0.5rem;">How It Works</h2>
+    <p style="color:rgba(255,255,255,0.6);margin-bottom:2rem;">Three simple steps to save a life</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2rem;max-width:900px;margin:0 auto;">
+      <div>
+        <div style="font-size:2.5rem;margin-bottom:1rem;">📍</div>
+        <h3 style="color:var(--red-light);font-size:1.3rem;margin-bottom:0.5rem;">Patient Sends Request</h3>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;">Patient logs in, selects blood group and urgency. System grabs real-time location.</p>
+      </div>
+      <div>
+        <div style="font-size:2.5rem;margin-bottom:1rem;">🔍</div>
+        <h3 style="color:var(--red-light);font-size:1.3rem;margin-bottom:0.5rem;">System Finds Nearest Match</h3>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;">Searches nearby hospitals, blood banks, and available donors within radius.</p>
+      </div>
+      <div>
+        <div style="font-size:2.5rem;margin-bottom:1rem;">🚨</div>
+        <h3 style="color:var(--red-light);font-size:1.3rem;margin-bottom:0.5rem;">Emergency Alert Raised</h3>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;">Instant notification via email & call simulation to the nearest blood source.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI FEATURE HIGHLIGHT -->
+  <section style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:2rem 1.5rem;text-align:center;margin:2rem 0;">
+    <div style="max-width:800px;margin:0 auto;">
+      <div style="font-size:3rem;margin-bottom:1rem;">🤖</div>
+      <h2 style="color:white;font-size:2.5rem;margin-bottom:0.5rem;">AI-Powered Blood Demand Prediction</h2>
+      <p style="font-size:1.1rem;margin-bottom:1.5rem;opacity:0.9;">Our unique machine learning system predicts blood demand up to 7 days in advance, optimizing emergency response and saving more lives.</p>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;margin-bottom:1rem;">
+        <div style="background:rgba(255,255,255,0.1);padding:0.5rem 1rem;border-radius:20px;font-size:0.9rem;">📈 Demand Forecasting</div>
+        <div style="background:rgba(255,255,255,0.1);padding:0.5rem 1rem;border-radius:20px;font-size:0.9rem;">🚨 Emergency Optimization</div>
+        <div style="background:rgba(255,255,255,0.1);padding:0.5rem 1rem;border-radius:20px;font-size:0.9rem;">🎯 Smart Donor Matching</div>
+        <div style="background:rgba(255,255,255,0.1);padding:0.5rem 1rem;border-radius:20px;font-size:0.9rem;">🏥 Resource Allocation</div>
+      </div>
+      <a href="ai-demo.html" style="display:inline-block;background:white;color:#667eea;padding:0.8rem 2rem;border-radius:25px;font-weight:600;text-decoration:none;margin-top:1rem;">🔍 View AI Demo</a>
+      <p style="font-size:0.9rem;margin-top:1rem;opacity:0.8;">See AI predictions in action • <a href="admin-dashboard.html" target="_blank" style="color:white;text-decoration:underline;">Admin Dashboard</a></p>
+    </div>
+  </section>
+
+  <footer style="background:var(--gray-900);color:var(--gray-400);text-align:center;padding:1.5rem;font-size:0.85rem;">
+    &copy; 2024 BloodConnect — Blood Management & Emergency Request System | College Project
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="auth.js"></script>
+  <script src="emergency.js"></script>
+  <script>
+    DB.init(); // Initialize database on first load
+  </script>
+</body>
+</html>
