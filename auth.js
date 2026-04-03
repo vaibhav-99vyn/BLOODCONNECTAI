@@ -14,7 +14,7 @@ const Auth = {
 
   logout() {
     sessionStorage.removeItem('bms_current_user');
-    window.location.href = 'index .html';
+    window.location.href = 'index.html';
   },
 
   getCurrentUser() {
@@ -31,12 +31,12 @@ const Auth = {
     const user = this.getCurrentUser();
     if (!user) {
       alert('Please log in first.');
-      window.location.href = 'index .html';
+      window.location.href = 'index.html';
       return null;
     }
     if (role && user.role !== role) {
       alert('Access denied.');
-      window.location.href = 'index .html';
+      window.location.href = 'index.html';
       return null;
     }
     return user;
